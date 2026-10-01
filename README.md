@@ -13,10 +13,10 @@ uv run frontieror submit --wait  # submit and wait for the score
 You need:
 
 - [uv](https://docs.astral.sh/uv/)
-- macOS or Linux (on Windows, use WSL)
+- macOS or Linux (on Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install))
 - an account and a team on the [challenge site](https://frontieror-challenge.com)
 - an [OpenRouter](https://openrouter.ai/keys) key for the example agent's model calls
-- Docker, only for `--docker`
+- Docker (optional), only needed for `--docker`
 
 `uv run` installs everything else on first use, including Python 3.14.
 
@@ -32,25 +32,27 @@ It signs you in through the browser, downloads the problems and sets up the solv
 
 ### Write your agent
 
-Your agent lives in `agent/`. Start with `find_solver` in `agent/main.py`:
+Your agent lives in the `agent/` folder. Start by inspecting the `find_solver` function in `agent/main.py`:
 
 ```python
 def find_solver(problem: Problem, tools: Tools, settings: dict) -> None: ...
 ```
 
-It gets a problem and has to produce solver code that defines:
+This function receives a problem description and must produce solver code that defines the function:
 
 ```python
 def solve(instance: dict, time_limit_s: int) -> dict: ...
 ```
 
-Save that code with `tools.save(code)`. The toolkit adds the part that reads the instance, calls `solve` and writes
-the solution.
+where `instance` is an instance of the given problem and `time_limit_s` is a strict time limit in seconds.
 
-The example `find_solver` asks a model for code, tests it, and asks for fixes until it works. Use it as a starting
-point.
+Once the agent has produced the solver code, it must save it with `tools.save(code)`. The toolkit adds the part
+that reads the instance data, calls `solve` and writes the solution.
 
-Run your agent on every problem:
+The `find_solver` included in this starter asks a model for code, tests it, and asks for fixes until it works. Use
+it as a starting point.
+
+To run your agent on every problem, use the following command, which calls `find_solver` for each problem:
 
 ```bash
 uv run frontieror find-solvers
@@ -58,30 +60,33 @@ uv run frontieror find-solvers
 
 ### Test and submit
 
-Test your solvers on the public instances:
+To test your solvers on the public instances, run:
 
 ```bash
 uv run frontieror test
 ```
 
-Then submit them:
+Then submit them with:
 
 ```bash
 uv run frontieror submit --wait
 ```
 
-`--wait` prints your score on the private instances once it's ready. Your team can submit 4 times per day.
+`--wait` waits for the server-side evaluation and prints your final score. The evaluation can take a while
+depending on the current server load. Keep in mind that your team has a limited number of submissions per day.
 
 ## Project structure
 
 | Path | What it is |
 | --- | --- |
-| `agent/` | Your agent. Start with `main.py`. |
+| `agent/` | Your agent. Start from `main.py`. |
 | `solvers/` | One folder per problem with `solve.py`. This is what gets submitted. |
 | `frontieror.toml` | Your agent's settings and extra PyPI packages. |
 | `toolkit/` | The `frontieror` command. Don't change it. |
 
 ## Commands
+
+Run these commands as `uv run frontieror <command>`:
 
 - **`init`** signs in through the browser and saves an API token in `.env`, replacing any token you had (`--token`
   uses one you already have). It also asks for your OpenRouter key, downloads the problems into `data/` and builds the
@@ -97,7 +102,7 @@ uv run frontieror submit --wait
 
 ## How solvers run
 
-Like in the sandbox:
+In the sandbox, each solver is run with the following command-line arguments:
 
 ```bash
 python solve.py --problem <slug> --instance <instance.json> --output <solution.json> --time-limit <seconds>
@@ -112,7 +117,7 @@ python solve.py --problem <slug> --instance <instance.json> --output <solution.j
 so feasibility and the score come from `submit --wait`.
 
 By default, solvers run directly on your machine, without the sandbox's isolation. `--docker` runs them in the
-challenge's image with the sandbox's limits (on Apple Silicon under emulation, so timings are slower).
+challenge's Docker image with the sandbox's limits.
 
 ## Extra packages
 
