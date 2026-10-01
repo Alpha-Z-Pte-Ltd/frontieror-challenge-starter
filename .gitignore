@@ -11,3 +11,7 @@ __pycache__/
 /data/
 /.envs/
 /runs/
+
+# Solvers written by the agent (`frontieror find-solvers`); keep only the folder.
+/solvers/*
+!/solvers/.gitkeep

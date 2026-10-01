@@ -32,12 +32,14 @@ def find_solver(problem: Problem, tools: Tools, settings: dict) -> None:
 
     The function should call `tools.save(code)` with the final code to save it.
     """
+    tools.log(f"calling solver for problem {problem.name} ({problem.slug})")
     model = settings["model"]
     task = prompts.task(problem, tools.environment)
     messages = [{"role": "user", "content": task}]
     best_code, best_passed = None, -1
 
     for attempt in range(1, settings.get("max_attempts", 5) + 1):
+        tools.log(f"attempt #{attempt}")
         reply = ask(model, messages)
         tools.log_file(f"reply-{attempt}.md", reply)
 
