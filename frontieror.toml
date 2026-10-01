@@ -1,0 +1,18 @@
+# Settings for the FrontierOR toolkit and for your agent.
+
+[environment]
+# Extra PyPI packages for your solvers, on top of the python-3.14 image's own preinstalled:
+# numpy, scipy, pandas, networkx, ortools, pulp, highspy, pyomo.
+# This is submitted with every Main-track submission, and `frontieror init` installs them into the local
+# solver environment the way the sandbox does (one requirement per entry, at most 50)
+#
+# Example:
+# requirements = ["pyscipopt==6.2.1", "numba>=0.67"]
+requirements = []
+
+[agent]
+# The function `frontieror find-solvers` runs for each problem. The rest of this table reaches it as `settings`.
+entry = "agent:find_solver"
+# This will be passed as `settings` to the `find_solver` function:
+model = "openai/gpt-5-nano" # Any OpenRouter model id.
+max_attempts = 5            # How many replies the model may give per problem
