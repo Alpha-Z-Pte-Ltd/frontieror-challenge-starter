@@ -166,7 +166,8 @@ def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
     passed = sum(r.ok for r in results)
     typer.echo(
         f"\n{passed} of {len(results)} instance run(s) passed. Only the format is checked here; feasibility and the "
-        "score come from the site after you submit."
+        "score come from the site after you submit.\n"
+        "Next: `uv run frontieror submit --wait` to upload your solvers and solutions."
     )
     if passed < len(results) or bad_layout:
         raise typer.Exit(1)
