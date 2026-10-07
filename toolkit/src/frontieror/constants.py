@@ -9,7 +9,8 @@ CLI_CLIENT_ID = "frontieror-cli"
 SLOW_DOWN_S = 5
 # Every submission from this repository runs in this image.
 IMAGE = "python-3.14"
-MAX_ARCHIVE_BYTES = 10 * 1024 * 1024
+# The largest Main-track upload the site takes, the archive with its fields.
+MAX_ARCHIVE_BYTES = 4 * 1024 * 1024
 SUBMISSION_POLL_S = 10
 # How many failed polls in a row `wait_for_result` retries before giving up.
 SUBMISSION_POLL_RETRIES = 30
@@ -17,11 +18,10 @@ SUBMISSION_POLL_RETRIES = 30
 SELF_HOSTED_ATTEMPTS = 3
 SELF_HOSTED_RETRY_S = 5
 # The largest Self-hosted solution the site takes.
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
-# A problem folder holds solve.py, or an executable solve, never both.
+# A problem folder's entry point, the only one the site runs.
 ENTRY = "solve.py"
-OTHER_ENTRY = "solve"
 
 # The sandbox a solver runs in.
 SANDBOX_CPUS = 2

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from frontieror.config import Project
-from frontieror.constants import ENTRY, OTHER_ENTRY
+from frontieror.constants import ENTRY
 from frontieror.data import Problem
 from frontieror.environment import packages
 from frontieror.testing import Report, Runner
@@ -135,15 +135,8 @@ class Tools:
 
         Returns:
             The path to the solver file.
-
-        Raises:
-            FileExistsError: The folder already holds an executable `solve`.
         """
         folder = self.solver_folder
-        if (folder / OTHER_ENTRY).exists():
-            raise FileExistsError(
-                f"{folder / OTHER_ENTRY} exists; a problem folder holds solve.py or solve, never both."
-            )
         folder.mkdir(parents=True, exist_ok=True)
         path = folder / ENTRY
         path.write_text(_source(code, add_data_loader))

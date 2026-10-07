@@ -147,11 +147,6 @@ def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
     for problem in problems:
         layout = coverage[problem.slug]
         typer.secho(f"\n{problem.slug} · {problem.name}", bold=True)
-        if layout.status == "both_entrypoints":
-            _err(f"  {layout.message}")
-            bad_layout = True
-            continue
-
         if layout.status != "ok":
             _warn(f"  {layout.message}")
             bad_layout = bad_layout or bool(slugs)  # A problem asked for by name must have a solver.

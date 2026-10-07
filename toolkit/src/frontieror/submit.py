@@ -79,10 +79,6 @@ def submit_main(
     for c in coverage:
         log(f"  {'✓' if c.status == 'ok' else '✗'} {c.message}")
 
-    both = [c.slug for c in coverage if c.status == "both_entrypoints"]
-    if both:
-        raise SubmitError(f"Remove solve or solve.py from {', '.join(both)}: the site refuses a folder with both.")
-
     ready = [c.slug for c in coverage if c.status == "ok"]
     if not ready:
         raise SubmitError(

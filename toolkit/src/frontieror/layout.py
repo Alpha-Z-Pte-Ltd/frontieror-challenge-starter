@@ -1,8 +1,7 @@
 """The Main-track archive: one folder per problem, named by its slug, with the solver's entry point inside.
 
-The problem folder holds solve.py or an executable solve, never both.
-A problem without a folder is labeled as missing, scoring 0 on all instances.
-This repository writes Python solvers, so solve.py is the entry point it runs and packs.
+The problem folder holds solve.py, the only entry point the site runs.
+A problem without a folder or without solve.py is labeled as missing, scoring 0 on all instances.
 """
 
 import io
@@ -10,7 +9,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from frontieror.constants import ENTRY, OTHER_ENTRY
+from frontieror.constants import ENTRY
 
 IGNORED_NAMES = {"__pycache__", ".DS_Store", ".pytest_cache"}
 IGNORED_SUFFIXES = {".pyc"}
@@ -19,7 +18,7 @@ IGNORED_SUFFIXES = {".pyc"}
 @dataclass(frozen=True)
 class Coverage:
     slug: str
-    status: str  # ok, missing (no folder), no_entrypoint (a folder without solve.py/solve) or both_entrypoints.
+    status: str  # ok, missing (no folder) or no_entrypoint (a folder without solve.py).
 
     @property
     def message(self) -> str:
@@ -27,21 +26,15 @@ class Coverage:
             "ok": f"{self.slug}/{ENTRY}",
             "missing": f"no {self.slug}/ folder: its instances score 0",
             "no_entrypoint": f"{self.slug}/ has no {ENTRY}: its instances score 0",
-            "both_entrypoints": f"{self.slug}/ holds both {ENTRY} and {OTHER_ENTRY}: the site refuses the upload",
         }[self.status]
 
 
 def check_layout(solvers_dir: Path, slugs: list[str]) -> list[Coverage]:
-    """Check that each problem folder exists and has a single entry point."""
+    """Check that each problem folder exists and has its solve.py."""
     coverage = []
     for slug in slugs:
         folder = solvers_dir / slug
-        has_entry = (folder / ENTRY).is_file()
-        has_other = (folder / OTHER_ENTRY).exists()
-
-        if has_entry and has_other:
-            status = "both_entrypoints"
-        elif has_entry:
+        if (folder / ENTRY).is_file():
             status = "ok"
         elif folder.is_dir():
             status = "no_entrypoint"
