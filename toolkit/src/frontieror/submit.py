@@ -73,7 +73,7 @@ def submit_main(
     """
     slugs = [p["slug"] for p in api.problems()]
     if not slugs:
-        raise SubmitError("The current stage has no problems to submit for.")
+        raise SubmitError("The open round has no problems to submit for.")
 
     coverage = check_layout(project.solvers_dir, slugs)
     for c in coverage:
@@ -82,7 +82,7 @@ def submit_main(
     ready = [c.slug for c in coverage if c.status == "ok"]
     if not ready:
         raise SubmitError(
-            "There is no solver for any problem of the stage. Run `uv run frontieror find-solvers` first."
+            "There is no solver for any problem of the open round. Run `uv run frontieror find-solvers` first."
         )
 
     missing = [c.slug for c in coverage if c.status != "ok"]
@@ -130,7 +130,7 @@ def submit_self_hosted(
 
     Args:
         project: The project, with its solvers.
-        problems: The stage's problems, as downloaded by `frontieror init`.
+        problems: The round's problems, as downloaded by `frontieror init`.
         runner: Runs the solvers.
         yes: Open a window without asking `confirm` first.
         log: Prints a progress line.

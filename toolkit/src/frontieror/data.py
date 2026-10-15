@@ -1,4 +1,4 @@
-"""The current stage's problems and the docker image, downloaded by `frontieror init` into data/ and read from there.
+"""The current round's problems and the docker image, downloaded by `frontieror init` into data/ and read from there.
 
 data/problems/<slug>/problem.json          statement and schemas, as the site publishes them
 data/problems/<slug>/instances/<name>.json the public instances
@@ -39,7 +39,7 @@ class Instance:
 
 @dataclass(frozen=True)
 class Problem:
-    """A problem of the current stage, with its public instances.
+    """A problem of the current round, with its public instances.
 
     Attributes:
         slug: The problem's id, which also names its folder in solvers/.
@@ -86,7 +86,7 @@ class Image:
 
 
 def download_data(project: Project, log: Callable[[str], None] = print) -> list[Problem]:
-    """Replaces data/ with the current stage's problems, their public instances, and the image's lock.
+    """Replaces data/ with the current round's problems, their public instances, and the image's lock.
 
     Args:
         project: The project whose data/ folder is replaced.

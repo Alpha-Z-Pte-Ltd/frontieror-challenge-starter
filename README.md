@@ -90,10 +90,10 @@ Run these commands as `uv run frontieror <command>`:
 
 - **`init`** signs in through the browser and saves an API token in `.env`, replacing any token you had (`--token`
   uses one you already have). It also asks for your OpenRouter key, downloads the problems into `data/` and builds the
-  solver environment in `.envs/`. Run it again when a new stage starts.
-- **`find-solvers [slug...] [--force] [--jobs N] [--docker]`** runs your agent on every problem without a solver.
+  solver environment in `.envs/`. Run it again when a new round opens.
+- **`find-solvers [slug...] [--force] [--jobs N] [--docker] [--yes]`** runs your agent on every problem without a solver.
   Logs and attempts go to `runs/<slug>/`. `--force` redoes problems that already have one; `--jobs` works on several
-  at once.
+  at once. If `data/` is from an earlier round, it warns and asks first; `--yes` runs without asking.
 - **`test [slug...] [--docker]`** runs each solver on the public instances and checks its output.
 - **`submit [--yes] [--acknowledge-missing] [--wait]`** submits for your team's track:
   - Main track: uploads `solvers/` with your extra packages. The site runs them on the private instances.

@@ -66,16 +66,16 @@ class Api:
             timeout=httpx.Timeout(60, read=300),
         )
 
-    # The user, their team and the stage.
+    # The user, their team, the stage and the round.
 
     def me(self) -> dict:
-        """Returns the signed-in user, their team, the current stage and the submissions left today."""
+        """Returns the signed-in user, their team, the current stage and round, and the submissions left today."""
         return self._json("GET", "/me")
 
-    # Problems and public instances of the current stage.
+    # Problems and public instances of the current round.
 
     def problems(self) -> list[dict]:
-        """Returns the problems of the current stage, with their descriptions and schemas."""
+        """Returns the problems of the current round, with their descriptions and schemas."""
         return self._json("GET", "/problems", params={"details": "1"})
 
     def instances(self, slug: str) -> list[dict]:

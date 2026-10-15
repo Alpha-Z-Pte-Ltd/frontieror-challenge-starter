@@ -38,7 +38,7 @@ app = typer.Typer(
 )
 
 SlugsType = Annotated[
-    list[str] | None, typer.Argument(help="Problem slugs; all problems of the stage when none are given.")
+    list[str] | None, typer.Argument(help="Problem slugs; all problems of the round when none are given.")
 ]
 DockerType = Annotated[
     bool, typer.Option("--docker", help="Run solvers in the sandbox's image with its limits (needs Docker).")
@@ -68,22 +68,22 @@ def init(
         str | None, typer.Option(help="Use this API token instead of signing in through the browser.")
     ] = None,
 ) -> None:
-    """Sign in, download the stage's problems and public instances, and build the local solver environment."""
+    """Sign in, download the round's problems and public instances, and build the local solver environment."""
     project = _load_project()
     me = _sign_in(project, token)
     _ask_openrouter_key(project)
 
     typer.echo(f"Signed in as {me['user']['name']} ({me['user']['email']}).")
-    team, stage = me["team"], me["stage"]
+    team, stage, round_ = me["team"], me["stage"], me["round"]
     if team:
         typer.echo(f"Team: {team['name']}, {team['track']} track.")
     else:
         _warn("You are not on a team yet. Create or join one on the dashboard before you submit.")
-    if not stage:
-        _warn("No stage is open right now, so there are no problems to download.")
+    if not stage or not round_:
+        _warn("No round is open right now, so there are no problems to download.")
         return
 
-    typer.echo(f"Downloading the problems of {stage['name']}...")
+    typer.echo(f"Downloading the problems of {_round_name(stage, round_)}...")
     problems = download_data(project, typer.echo)
     ensure_local(project, load_image(project), typer.echo)
     typer.echo(f"Ready: {len(problems)} problem(s) in data/problems. Next: `uv run frontieror find-solvers`.")
@@ -95,11 +95,25 @@ def find_solvers(
     force: Annotated[bool, typer.Option("--force", help="Also replace solvers that exist already.")] = False,
     jobs: Annotated[int, typer.Option(min=1, help="How many problems your agent works on at once.")] = 1,
     docker: DockerType = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask when data/ is from an earlier round.")] = False,
 ) -> None:
     """Run your agent on each problem without a solver, writing solvers/<slug>/solve.py."""
     project = _load_project()
+    problems = load_problems(project)
+    try:
+        open_round = _missing_round(problems, api.me())
+    except ApiError:
+        open_round = None  # offline or signed out: the check is only a courtesy
+
+    if open_round:
+        _warn(
+            f"data/ has the problems of an earlier round, and {open_round} is open. Run `uv run frontieror init` first."
+        )
+        if not yes and not (sys.stdin.isatty() and typer.confirm("Run the agent on them anyway?", default=False)):
+            raise typer.Exit(1)
+
     todo = []
-    for problem in _select(load_problems(project), slugs):
+    for problem in _select(problems, slugs):
         if force or not _has_solver(project, problem.slug):
             todo.append(problem)
         else:
@@ -180,12 +194,20 @@ def submit(
     """Submit for your team's track: Main uploads the solvers; Self-hosted runs them here and uploads the solutions."""
     project = _load_project()
     me = api.me()
-    team, stage = me["team"], me["stage"]
+    team, round_ = me["team"], me["round"]
     if not team:
         raise SubmitError("Create or join a team on the dashboard first.")
 
-    if not stage or stage["status"] != "active":
+    if not round_ or round_["status"] != "open":
         raise SubmitError("Submissions are closed right now.")
+
+    problems = load_problems(project)
+    open_round = _missing_round(problems, me)
+    if open_round:
+        raise SubmitError(
+            f"data/ does not have the problems of {open_round} yet. "
+            "Run `uv run frontieror init`, then `uv run frontieror find-solvers`."
+        )
 
     typer.echo(f"{team['name']}, {team['track']} track: {me['submissions_left_today']} submission(s) left today.")
 
@@ -197,14 +219,27 @@ def submit(
         )
     else:
         runner = Runner(project, image, log=typer.echo)
-        submission_id = submit_self_hosted(
-            project, load_problems(project), runner, yes=yes, log=typer.echo, confirm=confirm
-        )
+        submission_id = submit_self_hosted(project, problems, runner, yes=yes, log=typer.echo, confirm=confirm)
 
     if wait:
         wait_for_result(submission_id, typer.echo)
     else:
         typer.echo("Follow it on the dashboard, or pass --wait next time.")
+
+
+def _round_name(stage: dict, round_: dict) -> str:
+    """How the site names the round: "Round 2", or the stage's name when the stage has a single round."""
+    return f"Round {round_['number']}" if round_["of"] > 1 else stage["name"]
+
+
+def _missing_round(problems: list[Problem], me: dict) -> str | None:
+    """The open round's name when data/ lacks some of its problems: `init` last ran in an earlier round."""
+    round_ = me["round"]
+    if not round_ or round_["status"] != "open":
+        return None
+    if {p["slug"] for p in api.problems()} <= {p.slug for p in problems}:
+        return None
+    return _round_name(me["stage"], round_)
 
 
 def _load_project() -> Project:
