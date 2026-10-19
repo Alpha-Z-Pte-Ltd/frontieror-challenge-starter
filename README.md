@@ -97,8 +97,8 @@ Run these commands as `uv run frontieror <command>`:
 - **`test [slug...] [--docker]`** runs each solver on the public instances and checks its output.
 - **`submit [--yes] [--acknowledge-missing] [--wait]`** submits for your team's track:
   - Main track: uploads `solvers/` with your extra packages. The site runs them on the private instances.
-  - Self-hosted track: runs your solvers here on the private instances and uploads the solutions, within a one-hour
-    window.
+  - Self-hosted track: runs your solvers here on the private instances and uploads the solutions, within the round's
+    submission window.
 
 ## How solvers run
 

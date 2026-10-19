@@ -141,7 +141,7 @@ class Api:
         return self._json("GET", f"/submissions/{submission_id}")
 
     def start_self_hosted(self) -> dict:
-        """Opens a Self-hosted submission and its one-hour window; returns it with its instances."""
+        """Opens a Self-hosted submission and its window; returns it with its instances."""
         return self._json("POST", "/self-hosted/submissions")
 
     def current_self_hosted(self) -> dict | None:

@@ -1,6 +1,6 @@
 """Submitting. The Main track uploads the solvers as an archive with the image and extra packages as fields; the site
 runs them on the private instances. The Self-hosted track runs the solvers here, on the private instances handed out
-inside the site's one-hour submission window, and uploads each solution before its deadline.
+inside the site's submission window, and uploads each solution before its deadline.
 """
 
 import json
@@ -111,6 +111,8 @@ def submit_main(
 
     result = api.submit_main(archive, IMAGE, "\n".join(project.requirements) or None, acknowledge_missing=bool(missing))
     log(f"Submitted {result['id']}. The site builds the environment, then runs every solver on the private instances.")
+    if result.get("progress"):
+        log(_progress(result["status"], result["progress"]))
     return result["id"]
 
 
@@ -125,8 +127,8 @@ def submit_self_hosted(
 ) -> str:
     """Runs the solvers here on the Self-hosted track's private instances and uploads their solutions.
 
-    Opens the one-hour window, or resumes an open one. Each instance's clock starts when it is downloaded, and its
-    solution is uploaded before its deadline. An instance the site refuses is skipped, and the rest still run.
+    Opens the round's submission window, or resumes an open one. Each instance's clock starts when it is downloaded,
+    and its solution is uploaded before its deadline. An instance the site refuses is skipped, and the rest still run.
 
     Args:
         project: The project, with its solvers.
@@ -147,11 +149,14 @@ def submit_self_hosted(
     if submission:
         log(f"Resuming the open submission {submission['id']}, which closes at {submission['expires_at']}.")
     else:
-        if not yes and not confirm(
-            "Start a Self-hosted submission? It opens a one-hour window, and each instance's clock starts when it is "
-            "downloaded. This counts as one of today's submissions."
-        ):
-            raise SubmitError("Nothing was submitted.")
+        if not yes:
+            window = (api.me().get("round") or {}).get("self_hosted_window_s")
+            open_for = f" for {window // 60} minutes" if window else ""
+            if not confirm(
+                f"Start a Self-hosted submission? It stays open{open_for}, and each instance's clock starts when it is "
+                "downloaded. This counts as one of today's submissions."
+            ):
+                raise SubmitError("Nothing was submitted.")
 
         submission = api.start_self_hosted()
         log(f"Started submission {submission['id']}; it closes at {submission['expires_at']}.")
@@ -188,7 +193,8 @@ def submit_self_hosted(
 
 
 def wait_for_result(submission_id: str, log: LogType = print) -> dict:
-    """Polls a submission until it is evaluated, then logs its score per problem and instance, as the dashboard shows.
+    """Polls a submission until it is evaluated, logging a timed line whenever its progress changes, then logs its score
+    per problem and instance, as the dashboard shows.
 
     Args:
         submission_id: The id `submit_main` or `submit_self_hosted` returned.
@@ -200,7 +206,7 @@ def wait_for_result(submission_id: str, log: LogType = print) -> dict:
     Raises:
         ApiError: The site refused the request, or failed SUBMISSION_POLL_RETRIES times in a row.
     """
-    status = None
+    line = None
     failures = 0
     while True:
         try:
@@ -215,9 +221,11 @@ def wait_for_result(submission_id: str, log: LogType = print) -> dict:
             continue
         failures = 0
 
-        if submission["status"] != status:
-            status = submission["status"]
-            log(f"Status: {status}")
+        status = submission["status"]
+        progress = _progress(status, submission.get("progress"))
+        if progress != line:
+            line = progress
+            log(f"{datetime.now():%H:%M:%S}  {line}")
         if status in ("completed", "failed"):
             break
 
@@ -242,6 +250,21 @@ def wait_for_result(submission_id: str, log: LogType = print) -> dict:
             )
             log(f"    {instance['name']} ({instance['set']}): {result}")
     return submission
+
+
+def _progress(status: str, progress: dict | None) -> str:
+    """How far a submission has got, in the dashboard's words: "Queued · 2 ahead · results in about 14 min"."""
+    if not progress:
+        return {"pending": "Queued"}.get(status, status.capitalize())
+
+    if progress["instances_total"]:
+        where = f"Running · {progress['instances_done']}/{progress['instances_total']} instances"
+    elif status == "pending" and progress["ahead"]:
+        ahead = progress["ahead"]
+        where = f"Queued · {ahead} submission{'s' if ahead > 1 else ''} ahead"
+    else:
+        where = "Starting"
+    return f"{where} · results in about {progress['results_in_minutes']} min"
 
 
 def _solve_instance(
