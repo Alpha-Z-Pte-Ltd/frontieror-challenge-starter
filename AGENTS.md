@@ -13,6 +13,6 @@ sets the entrypoint and the `settings` passed to the entrypoint, and `[environme
 packages for solvers (rerun `init` after changing them).
 
 Work in `agent/` and `solvers/`; treat `toolkit/` as fixed. Solvers run with Python 3.14, 2 CPUs, 4 GB of memory and no
-network, and must finish within the time limit with a margin. `test` checks only timing and output format;
-feasibility and score come from `submit --wait`, which is limited per team per day, so don't submit without being
-asked. For formatting run `uv run ruff format`.
+network, and must finish within the time limit with a margin. `test` checks timing, output format and, with the problem's
+published checker (`data/problems/<slug>/feasibility_check.py`), feasibility; the score comes from `submit --wait`,
+which is limited per team per day, so don't submit without being asked. For formatting run `uv run ruff format`.

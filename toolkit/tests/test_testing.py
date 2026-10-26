@@ -1,10 +1,29 @@
-"""The core of `frontieror test` and of what the agent's tools.test returns: run like the sandbox, check the format."""
+"""The core of `frontieror test` and of what the agent's tools.test returns: run like the sandbox, check the format
+and, with a published checker, feasibility."""
+
+from dataclasses import replace
 
 from frontieror.tools import Tools
 
 GOOD = """
 def solve(instance, time_limit_s):
     return {"objective_value": 12.5, "routes": [{"vehicle": 0, "nodes": list(range(instance["n"]))}]}
+"""
+
+# Feasible when the route visits every node; the objective it recomputes is the number of nodes visited.
+CHECKER = """
+import argparse, json
+
+parser = argparse.ArgumentParser()
+for name in ("--instance_path", "--solution_path", "--result_path"):
+    parser.add_argument(name, required=True)
+args = parser.parse_args()
+
+n = json.load(open(args.instance_path))["n"]
+nodes = json.load(open(args.solution_path))["routes"][0]["nodes"]
+feasible = sorted(nodes) == list(range(n))
+result = {"feasible": feasible, "violations": [] if feasible else ["not every node is visited"]}
+json.dump(result | {"computed_objective_value": len(nodes)}, open(args.result_path, "w"))
 """
 
 
@@ -44,3 +63,16 @@ def test_failures_are_reported(project, problem, runner):
         results["invalid_format"].status == "invalid_format" and "routes[0].nodes" in results["invalid_format"].message
     )
     assert results["invalid_json"].status == "invalid_json"
+
+
+def test_published_checker_runs(project, problem, runner, tmp_path):
+    checker = tmp_path / "feasibility_check.py"
+    checker.write_text(CHECKER)
+    t = tools(project, replace(problem, checker=checker), runner)
+
+    feasible = t.test(GOOD).results[0]
+    assert feasible.ok and feasible.checked
+    assert feasible.objective == 3  # The checker's recomputed objective, not the reported 12.5.
+
+    infeasible = t.test(GOOD.replace('list(range(instance["n"]))', "[0]")).results[0]
+    assert infeasible.status == "infeasible" and "not every node is visited" in infeasible.message

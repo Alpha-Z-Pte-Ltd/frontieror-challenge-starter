@@ -89,12 +89,13 @@ depending on the current server load. Keep in mind that your team has a limited 
 Run these commands as `uv run frontieror <command>`:
 
 - **`init`** signs in through the browser and saves an API token in `.env`, replacing any token you had (`--token`
-  uses one you already have). It also asks for your OpenRouter key, downloads the problems into `data/` and builds the
-  solver environment in `.envs/`. Run it again when a new round opens.
+  uses one you already have). It also asks for your OpenRouter key, downloads the problems and their published checkers
+  into `data/` and builds the solver environment in `.envs/`. Run it again when a new round opens.
 - **`find-solvers [slug...] [--force] [--jobs N] [--docker] [--yes]`** runs your agent on every problem without a solver.
   Logs and attempts go to `runs/<slug>/`. `--force` redoes problems that already have one; `--jobs` works on several
   at once. If `data/` is from an earlier round, it warns and asks first; `--yes` runs without asking.
-- **`test [slug...] [--docker]`** runs each solver on the public instances and checks its output.
+- **`test [slug...] [--docker]`** runs each solver on the public instances and checks its output: the format, and
+  feasibility with the problem's checker when it is published.
 - **`submit [--yes] [--acknowledge-missing] [--wait]`** submits for your team's track:
   - Main track: uploads `solvers/` with your extra packages. The site runs them on the private instances.
   - Self-hosted track: runs your solvers here on the private instances and uploads the solutions, within the round's
@@ -113,11 +114,12 @@ python solve.py --problem <slug> --instance <instance.json> --output <solution.j
 - A solver still running at the time limit scores 0. Leave a margin.
 - The output follows the problem's solution schema, with a numeric `objective_value` that matches the decisions.
 
-`test` only checks that the solver finishes in time and that its output has the right format. The checker is private,
-so feasibility and the score come from `submit --wait`.
+`test` checks that the solver finishes in time and that its output has the right format. When the problem's checker is
+published, as in the testing stage and Stage 1, `test` then runs it on the solution, as the sandbox does: it verifies
+every constraint and recomputes the objective. The score comes from `submit --wait`.
 
-By default, solvers run directly on your machine, without the sandbox's isolation. `--docker` runs them in the
-challenge's Docker image with the sandbox's limits.
+By default, solvers and checkers run directly on your machine, without the sandbox's isolation. `--docker` runs them in
+the challenge's Docker images with the sandbox's limits: solvers in python-3.14, checkers in python-3.12.
 
 ## Extra packages
 

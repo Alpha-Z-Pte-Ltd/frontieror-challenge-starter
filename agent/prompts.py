@@ -25,7 +25,7 @@ TASK_PROMPT = """\
 ## Your Task
 Based on the problem description, instance data schema, and solution output schema above, write a Python function `solve(instance, time_limit_s)` that solves this optimization problem as efficiently as possible, while aiming to achieve an objective value as close to optimal as you can.
 The instance data schema (instance_schema.json) specifies the type, shape, and meaning of every field in the input JSON. Your function must be able to solve any instance following this schema.
-The solution output schema (solution_schema.json) specifies the type, key format, and meaning of every field your output JSON must contain. Your output MUST strictly follow this schema: include "objective_value" and all decision variable fields using the exact field names, key naming conventions, and nesting structure defined in the schema.
+The solution output schema (solution_schema.json) specifies the type, key format, and meaning of every field your output JSON must contain. Your output MUST strictly follow this schema: include "objective_value" (computed exactly according to the problem description) and all decision variable fields using the exact field names, key naming conventions, and nesting structure defined in the schema.
 
 ### Implementation Requirements
 1. Consider the tradeoff between solution quality against computational efficiency based on the nature of the problem. You can use any solution approach and any internal formulation you find effective.

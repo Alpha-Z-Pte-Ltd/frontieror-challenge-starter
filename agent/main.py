@@ -6,7 +6,8 @@ In this example, the agent is a simple loop that:
   2. runs it on the public instances;
   3. while something fails, sends the failures back and asks for a fix.
 
-The challenge's checker is private, so an accurate score and feasibility only come from the site after you submit.
+When the problem's checker is published, `tools.test` runs it too, so an infeasible solution counts as a failure.
+The score only comes from the site after you submit.
 """
 
 from openrouter import OpenRouter, RetryConfig

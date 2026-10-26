@@ -1,6 +1,7 @@
 """The current round's problems and the docker image, downloaded by `frontieror init` into data/ and read from there.
 
 data/problems/<slug>/problem.json          statement and schemas, as the site publishes them
+data/problems/<slug>/feasibility_check.py  the checker, when the site publishes it
 data/problems/<slug>/instances/<name>.json the public instances
 data/problems/<slug>/instances/index.json  their ids and time limits
 data/image/image.json                      the python-3.14 docker image: Python version, packages and limits
@@ -16,10 +17,11 @@ from pathlib import Path
 
 from frontieror.api import api
 from frontieror.config import ConfigError, Project
-from frontieror.constants import IMAGE
+from frontieror.constants import CHECKER_IMAGE, IMAGE
 from frontieror.files import empty_folder
 
 _SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+CHECKER_FILE = "feasibility_check.py"
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,7 @@ class Problem:
         solution_schema: An annotated example of a solution, as JSON text.
         solution_json_schema: The solution's JSON Schema, as JSON text; it checks the format only.
         instances: The public instances.
+        checker: The checker the sandbox runs on every solution, or None when the site does not publish it.
     """
 
     slug: str
@@ -60,6 +63,7 @@ class Problem:
     solution_schema: str
     solution_json_schema: str
     instances: list[Instance]
+    checker: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -70,6 +74,7 @@ class Image:
         id: The image's id on the site, such as "python-3.14".
         python_version: The image's Python version.
         pull: Where to `docker pull` the image from, or None if it is not published yet.
+        checker_pull: Where to `docker pull` the image the sandbox runs checkers in, or None.
         packages: The image's preinstalled packages.
         requirements_lock: The image's installed packages with their exact versions, in requirements format.
         max_packages: How many extra packages a submission may list.
@@ -83,6 +88,7 @@ class Image:
     requirements_lock: str
     max_packages: int
     max_requirements_bytes: int
+    checker_pull: str | None = None
 
 
 def download_data(project: Project, log: Callable[[str], None] = print) -> list[Problem]:
@@ -102,6 +108,7 @@ def download_data(project: Project, log: Callable[[str], None] = print) -> list[
     image = next((i for i in images["images"] if i["id"] == IMAGE), None)
     if image is None:
         raise ConfigError(f"The site no longer offers the {IMAGE} image. Update this repository.")
+    checker_image = next((i for i in images["images"] if i["id"] == CHECKER_IMAGE), None)
 
     staging = project.data_dir / ".problems-new"
     empty_folder(staging)
@@ -117,6 +124,7 @@ def download_data(project: Project, log: Callable[[str], None] = print) -> list[
                 "id": image["id"],
                 "python_version": image["python_version"],
                 "pull": image["pull"],
+                "checker_pull": checker_image and checker_image["pull"],
                 "packages": image["packages"],
                 "max_packages": images["requirements"]["max_packages"],
                 "max_requirements_bytes": images["requirements"]["max_bytes"],
@@ -159,6 +167,7 @@ def load_problems(project: Project) -> list[Problem]:
                 solution_schema=meta["solution_schema"],
                 solution_json_schema=meta["solution_json_schema"],
                 instances=instances,
+                checker=file.parent / meta["checker"] if meta.get("checker") else None,
             )
         )
     return problems
@@ -189,6 +198,7 @@ def load_image(project: Project) -> Image:
         requirements_lock=(project.image_dir / "requirements.lock").read_text(),
         max_packages=meta["max_packages"],
         max_requirements_bytes=meta["max_requirements_bytes"],
+        checker_pull=meta.get("checker_pull"),
     )
 
 
@@ -208,11 +218,15 @@ def _download_problem_instances(staging: Path, log: Callable[[str], None]) -> No
                     "instance_schema": _as_text(problem["instance_schema"]),
                     "solution_schema": _as_text(problem["solution_schema"]),
                     "solution_json_schema": _as_text(problem["solution_json_schema"]),
+                    "checker": CHECKER_FILE if problem.get("checker") else None,
                 },
                 indent=2,
                 ensure_ascii=False,
             )
         )
+
+        if problem.get("checker"):
+            (staging / slug / CHECKER_FILE).write_text(problem["checker"])
 
         index = []
         for instance in api.instances(slug):
@@ -223,7 +237,8 @@ def _download_problem_instances(staging: Path, log: Callable[[str], None]) -> No
             )
 
         (folder / "index.json").write_text(json.dumps(index, indent=2))
-        log(f"  {slug}: {problem['name']} ({len(index)} public instance{'s' if len(index) != 1 else ''})")
+        checker = ", checker" if problem.get("checker") else ""
+        log(f"  {slug}: {problem['name']} ({len(index)} public instance{'s' if len(index) != 1 else ''}{checker})")
 
 
 def _as_text(schema: object) -> str:

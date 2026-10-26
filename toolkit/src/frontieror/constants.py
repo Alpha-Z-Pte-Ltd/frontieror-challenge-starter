@@ -9,6 +9,8 @@ CLI_CLIENT_ID = "frontieror-cli"
 SLOW_DOWN_S = 5
 # Every submission from this repository runs in this image.
 IMAGE = "python-3.14"
+# The image the sandbox runs checkers in, used by `--docker`.
+CHECKER_IMAGE = "python-3.12"
 # The largest Main-track upload the site takes, the archive with its fields.
 MAX_ARCHIVE_BYTES = 4 * 1024 * 1024
 SUBMISSION_POLL_S = 10
@@ -38,6 +40,8 @@ IMAGE_LOCK = "/opt/python-base/requirements.lock"
 ENV_MOUNT = "/opt/env"
 # Docker needs a moment to start a container, which the sandbox does not count against the time limit.
 DOCKER_START_GRACE_S = 5
+# How long the sandbox gives a checker.
+CHECKER_TIMEOUT_S = 120
 
 # This project.
 CONFIG_FILE = "frontieror.toml"

@@ -150,7 +150,8 @@ def find_solvers(
 
 @command()
 def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
-    """Run solvers/<slug>/solve.py on the public instances the way the sandbox does, and check each output's format."""
+    """Run solvers/<slug>/solve.py on the public instances the way the sandbox does, and check each output's format and,
+    with the problem's published checker, its feasibility."""
     project = _load_project()
     problems = _select(load_problems(project), slugs)
     coverage = {c.slug: c for c in check_layout(project.solvers_dir, [p.slug for p in problems])}
@@ -173,9 +174,14 @@ def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
             _show(result, project)
 
     passed = sum(r.ok for r in results)
+    note = (
+        "Problems without a published checker are checked for format only; feasibility and the score come from the "
+        "site after you submit."
+        if any(p.checker is None for p in problems)
+        else "Scores come from the site after you submit."
+    )
     typer.echo(
-        f"\n{passed} of {len(results)} instance run(s) passed. Only the format is checked here; feasibility and the "
-        "score come from the site after you submit.\n"
+        f"\n{passed} of {len(results)} instance run(s) passed. {note}\n"
         "Next: `uv run frontieror submit --wait` to upload your solvers and solutions."
     )
     if passed < len(results) or bad_layout:
@@ -331,7 +337,11 @@ def _show(result: InstanceResult, project: Project) -> None:
         else f"{result.wall_s:.1f} s of {result.time_limit_s} s"
     )
     if result.ok:
-        objective = f"objective {result.objective:g} (not verified)"
+        objective = (
+            f"feasible, objective {result.objective:g}"
+            if result.checked
+            else f"objective {result.objective:g} (not verified)"
+        )
         typer.secho(f"  ✓ {result.instance:<24} {timing:<18} {objective}", fg=typer.colors.GREEN)
     else:
         typer.secho(f"  ✗ {result.instance:<24} {timing:<18} {result.status}", fg=typer.colors.RED)

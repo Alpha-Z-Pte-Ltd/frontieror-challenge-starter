@@ -93,7 +93,8 @@ class Tools:
         return self.project.runs_dir / self.problem.slug
 
     def test(self, code: str, instances: Iterable[str] | None = None, add_data_loader: bool = True) -> Report:
-        """Runs `code` as solve.py on the public instances, all or the ones named, and checks its output.
+        """Runs `code` as solve.py on the public instances, all or the ones named, and checks its output: the format,
+        and feasibility with the problem's checker when it is published.
 
         Args:
             code: The solver's code, which defines `solve(instance, time_limit_s) -> dict`.
