@@ -32,28 +32,29 @@ class Verdict:
 def run_checker(
     root: Path, checker: Path, instance: Path, solution: Path, result: Path, python: Path | None, image_ref: str | None
 ) -> Verdict:
-    """Runs the checker in a new folder `root`, removed afterwards, and copies its result to `result`.
+    """Runs the checker in a new folder `root`, removed afterwards, and copies its result to `result`. The checker
+    runs from its own folder, read-only with Docker, as some read other files there: modules they import, or a
+    witness checker's model of the instance.
 
     Args:
         root: A folder that does not exist yet.
-        checker: The problem's feasibility_check.py.
+        checker: The problem's feasibility_check.py, in its folder.
         instance: The instance the solution is for.
         solution: The solution to check.
         result: Where to keep the checker's result.
         python: The Python to run the checker with natively.
         image_ref: The image to run the checker in with Docker, used instead of `python` when given.
     """
-    for folder in ("checker", "in", "out"):
+    for folder in ("in", "out"):
         (root / folder).mkdir(parents=True)
-    shutil.copyfile(checker, root / "checker" / "feasibility_check.py")
     shutil.copyfile(instance, root / "in" / "instance.json")
     shutil.copyfile(solution, root / "in" / "solution.json")
 
     try:
         if image_ref:
-            code, log = _run_docker(root, image_ref)
+            code, log = _run_docker(root, checker, image_ref)
         else:
-            code, log = _run_native(root, python)
+            code, log = _run_native(root, checker, python)
 
         output = root / "out" / "result.json"
         if output.is_file():
@@ -63,10 +64,10 @@ def run_checker(
         shutil.rmtree(root, ignore_errors=True)
 
 
-def _run_native(root: Path, python: Path | None) -> tuple[int | None, str]:
+def _run_native(root: Path, checker: Path, python: Path | None) -> tuple[int | None, str]:
     command = [
         str(python),
-        "checker/feasibility_check.py",
+        str(checker.resolve()),
         "--instance_path", "in/instance.json",
         "--solution_path", "in/solution.json",
         "--result_path", "out/result.json",
@@ -86,18 +87,20 @@ def _run_native(root: Path, python: Path | None) -> tuple[int | None, str]:
     return done.returncode, done.stdout + done.stderr
 
 
-def _run_docker(root: Path, image_ref: str) -> tuple[int | None, str]:
+def _run_docker(root: Path, checker: Path, image_ref: str) -> tuple[int | None, str]:
     name = f"frontieror-check-{uuid.uuid4().hex[:12]}"
     command = docker_run(
         image_ref,
         [
-            "python", "/work/checker/feasibility_check.py",
+            "python", f"/work/checker/{checker.name}",
             "--instance_path", "/work/in/instance.json",
             "--solution_path", "/work/in/solution.json",
             "--result_path", "/work/out/result.json",
         ],
         env={"HOME": "/tmp", "PYTHONDONTWRITEBYTECODE": "1"},
-        mounts=[f"{root / 'checker'}:/work/checker:ro", f"{root / 'in'}:/work/in:ro", f"{root / 'out'}:/work/out"],
+        mounts=[
+            f"{checker.parent.resolve()}:/work/checker:ro", f"{root / 'in'}:/work/in:ro", f"{root / 'out'}:/work/out"
+        ],
         options=["--name", name, "--pull", "never", *SANDBOX_LIMITS],
     )  # fmt: skip
     try:

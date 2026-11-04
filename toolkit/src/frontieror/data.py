@@ -1,16 +1,19 @@
 """The current round's problems and the docker image, downloaded by `frontieror init` into data/ and read from there.
 
 data/problems/<slug>/problem.json          statement and schemas, as the site publishes them
-data/problems/<slug>/feasibility_check.py  the checker, when the site publishes it
+data/problems/<slug>/checker/             the checker, when the site publishes it: feasibility_check.py and any
+                                           files it reads from its folder
 data/problems/<slug>/instances/<name>.json the public instances
 data/problems/<slug>/instances/index.json  their ids and time limits
 data/image/image.json                      the python-3.14 docker image: Python version, packages and limits
 data/image/requirements.lock               the image's packages and their locked versions
 """
 
+import io
 import json
 import re
 import shutil
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +24,7 @@ from frontieror.constants import CHECKER_IMAGE, IMAGE
 from frontieror.files import empty_folder
 
 _SAFE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+CHECKER_DIR = "checker"
 CHECKER_FILE = "feasibility_check.py"
 
 
@@ -218,7 +222,7 @@ def _download_problem_instances(staging: Path, log: Callable[[str], None]) -> No
                     "instance_schema": _as_text(problem["instance_schema"]),
                     "solution_schema": _as_text(problem["solution_schema"]),
                     "solution_json_schema": _as_text(problem["solution_json_schema"]),
-                    "checker": CHECKER_FILE if problem.get("checker") else None,
+                    "checker": f"{CHECKER_DIR}/{CHECKER_FILE}" if problem.get("checker") else None,
                 },
                 indent=2,
                 ensure_ascii=False,
@@ -226,7 +230,13 @@ def _download_problem_instances(staging: Path, log: Callable[[str], None]) -> No
         )
 
         if problem.get("checker"):
-            (staging / slug / CHECKER_FILE).write_text(problem["checker"])
+            checker_dir = staging / slug / CHECKER_DIR
+            checker_dir.mkdir()
+            # A checker that reads other files from its folder, such as a witness checker's models, comes as a zip.
+            if problem.get("checker_archive"):
+                zipfile.ZipFile(io.BytesIO(api.checker_archive(slug))).extractall(checker_dir)
+            else:
+                (checker_dir / CHECKER_FILE).write_text(problem["checker"])
 
         index = []
         for instance in api.instances(slug):

@@ -101,6 +101,17 @@ class Api:
         """
         return self._request("GET", f"/problems/{slug}/instances/{instance_id}").content
 
+    def checker_archive(self, slug: str) -> bytes:
+        """Downloads a published checker that reads other files from its folder.
+
+        Args:
+            slug: The problem's slug, whose `checker_archive` is true.
+
+        Returns:
+            A zip of the checker's folder: feasibility_check.py, its modules and the public instances' files.
+        """
+        return self._request("GET", f"/problems/{slug}/checker").content
+
     def images(self) -> dict:
         """Returns the site's docker images, with their packages and locks, and the limits on extra packages."""
         return self._json("GET", "/images")

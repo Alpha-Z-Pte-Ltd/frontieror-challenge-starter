@@ -10,9 +10,11 @@ def solve(instance, time_limit_s):
     return {"objective_value": 12.5, "routes": [{"vehicle": 0, "nodes": list(range(instance["n"]))}]}
 """
 
-# Feasible when the route visits every node; the objective it recomputes is the number of nodes visited.
+# Feasible when the route visits every node; the objective it recomputes is the number of nodes visited, by a helper
+# module in its folder, as some published checkers import one.
 CHECKER = """
 import argparse, json
+from helper import visited
 
 parser = argparse.ArgumentParser()
 for name in ("--instance_path", "--solution_path", "--result_path"):
@@ -23,7 +25,7 @@ n = json.load(open(args.instance_path))["n"]
 nodes = json.load(open(args.solution_path))["routes"][0]["nodes"]
 feasible = sorted(nodes) == list(range(n))
 result = {"feasible": feasible, "violations": [] if feasible else ["not every node is visited"]}
-json.dump(result | {"computed_objective_value": len(nodes)}, open(args.result_path, "w"))
+json.dump(result | {"computed_objective_value": visited(nodes)}, open(args.result_path, "w"))
 """
 
 
@@ -66,8 +68,10 @@ def test_failures_are_reported(project, problem, runner):
 
 
 def test_published_checker_runs(project, problem, runner, tmp_path):
-    checker = tmp_path / "feasibility_check.py"
+    checker = tmp_path / "checker" / "feasibility_check.py"
+    checker.parent.mkdir()
     checker.write_text(CHECKER)
+    (checker.parent / "helper.py").write_text("def visited(nodes):\n    return len(nodes)\n")
     t = tools(project, replace(problem, checker=checker), runner)
 
     feasible = t.test(GOOD).results[0]
