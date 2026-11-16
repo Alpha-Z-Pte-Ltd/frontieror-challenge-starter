@@ -20,7 +20,7 @@ class Project:
 
     Attributes:
         root: The folder that holds frontieror.toml.
-        requirements: Extra PyPI packages for the solvers, from `[environment] requirements`.
+        requirements: Extra PyPI packages for the algorithms, from `[environment] requirements`.
         agent: The `[agent]` table; the CLI passes it, without `entry`, as `settings` to the agent.
     """
 
@@ -44,18 +44,18 @@ class Project:
         return self.data_dir / "image"
 
     @property
-    def solvers_dir(self) -> Path:
-        """solvers/: one folder per problem, with its solve.py."""
-        return self.root / "solvers"
+    def algorithms_dir(self) -> Path:
+        """algorithms/: one folder per problem, with its solve.py."""
+        return self.root / "algorithms"
 
     @property
     def envs_dir(self) -> Path:
-        """.envs/: the built solver environments."""
+        """.envs/: the built algorithm environments."""
         return self.root / ".envs"
 
     @property
     def runs_dir(self) -> Path:
-        """runs/: the agent's logs and the outputs of solver runs."""
+        """runs/: the agent's logs and the outputs of algorithm runs."""
         return self.root / "runs"
 
 

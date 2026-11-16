@@ -1,4 +1,4 @@
-"""FrontierOR Challenge toolkit: tests solvers the way the sandbox runs them, and talks to the challenge site.
+"""FrontierOR Challenge toolkit: tests algorithms the way the sandbox runs them, and talks to the challenge site.
 
 Your agent gets a `Problem` and `Tools` for each problem. The rest is for scripting what the `frontieror` command does:
 

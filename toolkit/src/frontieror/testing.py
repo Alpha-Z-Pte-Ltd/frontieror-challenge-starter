@@ -1,5 +1,5 @@
-"""Testing a solver on an instance: the run (run.py), the format checks (checks.py) and, when the problem's checker is
-published, the checker (checker.py), as one result."""
+"""Testing an algorithm on an instance: the run (run.py), the format checks (checks.py) and, when the problem's checker
+is published, the checker (checker.py), as one result."""
 
 import shutil
 import subprocess
@@ -13,14 +13,15 @@ from frontieror.checker import run_checker
 from frontieror.checks import check_output
 from frontieror.config import ConfigError, Project
 from frontieror.data import Image, Instance, Problem
-from frontieror.environment import SolverEnv, ensure_docker, ensure_local
+from frontieror.environment import AlgorithmEnv, ensure_docker, ensure_local
 from frontieror.files import empty_folder
 from frontieror.run import Workspace, run_docker, run_native
 
 
 @dataclass(frozen=True)
 class InstanceResult:
-    """The result of running a solver on one instance and checking its output, with the checker when it is published.
+    """The result of running an algorithm on one instance and checking its output, with the checker when it is
+    published.
 
     Attributes:
         instance: The instance's name.
@@ -30,7 +31,7 @@ class InstanceResult:
         time_limit_s: The instance's time limit, in seconds.
         objective: The objective the checker recomputed, or without a checker the objective_value the solution
             reports; None unless the solution passed.
-        log: The end of the solver's output, stdout and stderr together.
+        log: The end of the algorithm's output, stdout and stderr together.
         output_dir: The folder that keeps the run's log.txt, solution.json and the checker's result.json.
         checked: Whether the problem's checker ran on the solution.
     """
@@ -47,19 +48,20 @@ class InstanceResult:
 
     @property
     def ok(self) -> bool:
-        """Whether the solver finished in time, its output has the right format and the checker, if any, accepts it."""
+        """Whether the algorithm finished in time, its output has the right format and the checker, if any,
+        accepts it."""
         return self.status == "ok"
 
     @property
     def solution(self) -> Path | None:
-        """The solution file the solver wrote, or None if it wrote none."""
+        """The solution file the algorithm wrote, or None if it wrote none."""
         path = self.output_dir / "solution.json" if self.output_dir else None
         return path if path and path.is_file() else None
 
 
 @dataclass(frozen=True)
 class Report:
-    """The results of testing a solver on several instances.
+    """The results of testing an algorithm on several instances.
 
     Attributes:
         results: One result per instance.
@@ -79,11 +81,11 @@ class Report:
 
 
 class Runner:
-    """Runs solvers one at a time, natively or in Docker, so that one run's timing is not skewed by another's.
+    """Runs algorithms one at a time, natively or in Docker, so that one run's timing is not skewed by another's.
 
     Args:
         project: The project, whose runs/ folder holds the runs' working files.
-        image: The image whose environment the solvers run in.
+        image: The image whose environment the algorithms run in.
         docker: Run in the image with the sandbox's limits instead of natively.
         log: Prints a progress line.
         env: An existing environment to run natively in, instead of building one from the image.
@@ -95,7 +97,7 @@ class Runner:
         image: Image,
         docker: bool = False,
         log: Callable[[str], None] = print,
-        env: SolverEnv | None = None,
+        env: AlgorithmEnv | None = None,
     ):
         self.project = project
         self.image = image
@@ -110,7 +112,7 @@ class Runner:
         self._checker_ready = not docker
 
     def setup(self) -> None:
-        """Builds the solver environment, and for Docker pulls the image; `run` calls it before the first run.
+        """Builds the algorithm environment, and for Docker pulls the image; `run` calls it before the first run.
 
         Raises:
             ConfigError: Docker is needed but not available, or the image could not be pulled.
@@ -155,12 +157,12 @@ class Runner:
         except subprocess.CalledProcessError as exc:
             raise ConfigError(f"Could not pull {image_ref}; see Docker's output above.") from exc
 
-    def run(self, solver_dir: Path, problem: Problem, instance: Instance, keep: Path) -> InstanceResult:
-        """Runs a solver on an instance the way the sandbox does, checks its output's format, then runs the problem's
-        checker on it when the checker is published.
+    def run(self, algorithm_dir: Path, problem: Problem, instance: Instance, keep: Path) -> InstanceResult:
+        """Runs an algorithm on an instance the way the sandbox does, checks its output's format, then runs the
+        problem's checker on it when the checker is published.
 
         Args:
-            solver_dir: The solver's folder, with its solve.py.
+            algorithm_dir: The algorithm's folder, with its solve.py.
             problem: The problem, for its slug, solution schema and checker.
             instance: The instance to run on.
             keep: The folder where the run's log.txt, solution.json and the checker's result.json are kept.
@@ -175,7 +177,7 @@ class Runner:
         with self._lock:
             root = self.project.runs_dir / ".work" / uuid.uuid4().hex
 
-            with Workspace.create(root, solver_dir, instance.path) as work:
+            with Workspace.create(root, algorithm_dir, instance.path) as work:
                 if self.docker:
                     outcome = run_docker(work, problem.slug, instance.time_limit_s, self.image.pull, self._docker_env)
                 else:

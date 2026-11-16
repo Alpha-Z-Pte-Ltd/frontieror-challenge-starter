@@ -6,7 +6,7 @@ import pytest
 
 from frontieror.config import Project
 from frontieror.data import Image, Instance, Problem
-from frontieror.environment import SolverEnv
+from frontieror.environment import AlgorithmEnv
 from frontieror.testing import Runner
 
 JSON_SCHEMA = {
@@ -52,7 +52,7 @@ def problem(tmp_path: Path) -> Problem:
 
 @pytest.fixture
 def runner(project: Project) -> Runner:
-    """Runs solvers with the interpreter running the tests, instead of building the image's environment."""
+    """Runs algorithms with the interpreter running the tests, instead of building the image's environment."""
     image = Image(
         id="python-3.14",
         python_version="3.14",
@@ -62,7 +62,7 @@ def runner(project: Project) -> Runner:
         max_packages=50,
         max_requirements_bytes=10240,
     )
-    env = SolverEnv(
+    env = AlgorithmEnv(
         venv=Path(sys.prefix), python=Path(sys.executable), requirements_lock=project.root / "requirements.lock"
     )
     return Runner(project, image, docker=False, log=lambda _: None, env=env)

@@ -1,6 +1,6 @@
-"""What your agent gets from the toolkit. `frontieror find-solvers` calls the agent's entry (frontieror.toml) as
+"""What your agent gets from the toolkit. `frontieror find-algorithms` calls the agent's entry (frontieror.toml) as
 
-    find_solver(problem: Problem, tools: Tools, settings: dict) -> None
+    find_algorithm(problem: Problem, tools: Tools, settings: dict) -> None
 
 once per problem; the default one is exported from agent/__init__.py and lives in agent/main.py. The toolkit only
 runs and checks code: it never writes prompts.
@@ -47,11 +47,11 @@ if __name__ == "__main__":
 
 @dataclass(frozen=True)
 class Environment:
-    """What a solver runs with, for the agent's prompt.
+    """What an algorithm runs with, for the agent's prompt.
 
     Attributes:
         python_version: The Python version, such as "3.14".
-        packages: The packages a solver can import: the image's and the extra ones from frontieror.toml.
+        packages: The packages an algorithm can import: the image's and the extra ones from frontieror.toml.
     """
 
     python_version: str
@@ -59,12 +59,12 @@ class Environment:
 
 
 class Tools:
-    """What the agent gets for one problem: running candidate code, saving the solver, and logging.
+    """What the agent gets for one problem: running candidate code, saving the algorithm, and logging.
 
     Attributes:
         project: The project.
         problem: The problem the agent works on.
-        environment: What the solvers run with.
+        environment: What the algorithms run with.
     """
 
     def __init__(
@@ -83,9 +83,9 @@ class Tools:
         self._lock = threading.Lock()
 
     @property
-    def solver_folder(self) -> Path:
-        """Path `solvers/<slug>/`, where this problem's solver goes, and what `submit` sends."""
-        return self.project.solvers_dir / self.problem.slug
+    def algorithm_folder(self) -> Path:
+        """Path `algorithms/<slug>/`, where this problem's algorithm goes, and what `submit` sends."""
+        return self.project.algorithms_dir / self.problem.slug
 
     @property
     def runs_dir(self) -> Path:
@@ -97,12 +97,12 @@ class Tools:
         and feasibility with the problem's checker when it is published.
 
         Args:
-            code: The solver's code, which defines `solve(instance, time_limit_s) -> dict`.
+            code: The algorithm's code, which defines `solve(instance, time_limit_s) -> dict`.
             instances: The names of the instances to run; all if None.
             add_data_loader: If True, the data loading logic is appended to `code`.
 
         Returns:
-            A report of the runs, with each instance's result and the solver's output.
+            A report of the runs, with each instance's result and the algorithm's output.
 
         Raises:
             ValueError: An instance name is not one of the problem's public instances.
@@ -119,25 +119,25 @@ class Tools:
             self._candidates += 1
             folder = self.runs_dir / f"candidate-{self._candidates}"
 
-        solver = folder / "solver"
-        solver.mkdir(parents=True, exist_ok=True)
-        (solver / ENTRY).write_text(_source(code, add_data_loader))
+        algorithm = folder / "algorithm"
+        algorithm.mkdir(parents=True, exist_ok=True)
+        (algorithm / ENTRY).write_text(_source(code, add_data_loader))
 
         return Report(
-            [self._runner.run(solver, self.problem, instance, folder / instance.name) for instance in selected]
+            [self._runner.run(algorithm, self.problem, instance, folder / instance.name) for instance in selected]
         )
 
     def save(self, code: str, add_data_loader: bool = True) -> Path:
-        """Writes the solver to solvers/<slug>/solve.py: what `test` checks and `submit` sends.
+        """Writes the algorithm to algorithms/<slug>/solve.py: what `test` checks and `submit` sends.
 
         Args:
-            code: The solver's code, which defines `solve(instance, time_limit_s) -> dict`.
+            code: The algorithm's code, which defines `solve(instance, time_limit_s) -> dict`.
             add_data_loader: If True, the data loading logic is appended to `code`.
 
         Returns:
-            The path to the solver file.
+            The path to the algorithm file.
         """
-        folder = self.solver_folder
+        folder = self.algorithm_folder
         folder.mkdir(parents=True, exist_ok=True)
         path = folder / ENTRY
         path.write_text(_source(code, add_data_loader))

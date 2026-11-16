@@ -25,7 +25,7 @@ MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 # A problem folder's entry point, the only one the site runs.
 ENTRY = "solve.py"
 
-# The sandbox a solver runs in.
+# The sandbox an algorithm runs in.
 SANDBOX_CPUS = 2
 SANDBOX_MEMORY_MB = 4096
 SANDBOX_PIDS = 256
@@ -46,4 +46,4 @@ CHECKER_TIMEOUT_S = 120
 # This project.
 CONFIG_FILE = "frontieror.toml"
 ENV_FILE = ".env"
-DEFAULT_ENTRY = "agent:find_solver"
+DEFAULT_ENTRY = "agent:find_algorithm"

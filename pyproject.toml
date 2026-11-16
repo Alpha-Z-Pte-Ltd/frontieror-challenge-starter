@@ -1,7 +1,7 @@
 [project]
 name = "frontieror-starter"
 version = "0.1.0"
-description = "Starting point for the FrontierOR Challenge: an LLM agent that writes solvers, and the toolkit that tests and submits them"
+description = "Starting point for the FrontierOR Challenge: an LLM agent that writes algorithms, and the toolkit that tests and submits them"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
