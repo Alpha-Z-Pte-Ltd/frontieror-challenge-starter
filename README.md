@@ -1,13 +1,13 @@
 # FrontierOR Challenge starter
 
-A starting point for the [FrontierOR Challenge](https://frontieror-challenge.com): an example LLM agent that writes a
-solver for each problem, and a toolkit that tests the solvers like the challenge's sandbox and submits them.
+A starting point for the [FrontierOR Challenge](https://frontieror-challenge.com): an example LLM agent that writes an
+algorithm for each problem, and a toolkit that tests the algorithms like the challenge's sandbox and submits them.
 
 ```bash
-uv run frontieror init           # sign in, download the problems, set up the solver environment
-uv run frontieror find-solvers   # your agent writes solvers/<slug>/solve.py for each problem
-uv run frontieror test           # run the solvers on the public instances
-uv run frontieror submit --wait  # submit and wait for the score
+uv run frontieror init             # sign in, download the problems, set up the algorithm environment
+uv run frontieror find-algorithms  # your agent writes algorithms/<slug>/solve.py for each problem
+uv run frontieror test             # run the algorithms on the public instances
+uv run frontieror submit --wait    # submit and wait for the score
 ```
 
 You need:
@@ -28,17 +28,17 @@ Register on the [challenge site](https://frontieror-challenge.com), then run:
 uv run frontieror init
 ```
 
-It signs you in through the browser, downloads the problems and sets up the solver environment.
+It signs you in through the browser, downloads the problems and sets up the algorithm environment.
 
 ### Write your agent
 
-Your agent lives in the `agent/` folder. Start by inspecting the `find_solver` function in `agent/main.py`:
+Your agent lives in the `agent/` folder. Start by inspecting the `find_algorithm` function in `agent/main.py`:
 
 ```python
-def find_solver(problem: Problem, tools: Tools, settings: dict) -> None: ...
+def find_algorithm(problem: Problem, tools: Tools, settings: dict) -> None: ...
 ```
 
-This function receives a problem description and must produce solver code that defines the function:
+This function receives a problem description and must write an algorithm: Python code that defines the function:
 
 ```python
 def solve(instance: dict, time_limit_s: int) -> dict: ...
@@ -46,21 +46,21 @@ def solve(instance: dict, time_limit_s: int) -> dict: ...
 
 where `instance` is an instance of the given problem and `time_limit_s` is a strict time limit in seconds.
 
-Once the agent has produced the solver code, it must save it with `tools.save(code)`. The toolkit adds the part
-that reads the instance data, calls `solve` and writes the solution.
+Once the agent has written the algorithm, it must save it with `tools.save(code)`. The toolkit adds the part that
+reads the instance, calls `solve` and writes the solution.
 
-The `find_solver` included in this starter asks a model for code, tests it, and asks for fixes until it works. Use
+The `find_algorithm` included in this starter asks a model for code, tests it, and asks for fixes until it works. Use
 it as a starting point.
 
-To run your agent on every problem, use the following command, which calls `find_solver` for each problem:
+To run your agent on every problem, use the following command, which calls `find_algorithm` for each problem:
 
 ```bash
-uv run frontieror find-solvers
+uv run frontieror find-algorithms
 ```
 
 ### Test and submit
 
-To test your solvers on the public instances, run:
+To test your algorithms on the public instances, run:
 
 ```bash
 uv run frontieror test
@@ -80,7 +80,7 @@ depending on the current server load. Keep in mind that your team has a limited 
 | Path | What it is |
 | --- | --- |
 | `agent/` | Your agent. Start from `main.py`. |
-| `solvers/` | One folder per problem with `solve.py`. This is what gets submitted. |
+| `algorithms/` | One folder per problem with `solve.py`. This is what gets submitted. |
 | `frontieror.toml` | Your agent's settings and extra PyPI packages. |
 | `toolkit/` | The `frontieror` command. Don't change it. |
 
@@ -90,36 +90,36 @@ Run these commands as `uv run frontieror <command>`:
 
 - **`init`** signs in through the browser and saves an API token in `.env`, replacing any token you had (`--token`
   uses one you already have). It also asks for your OpenRouter key, downloads the problems and their published checkers
-  into `data/` and builds the solver environment in `.envs/`. Run it again when a new round opens.
-- **`find-solvers [slug...] [--force] [--jobs N] [--docker] [--yes]`** runs your agent on every problem without a solver.
-  Logs and attempts go to `runs/<slug>/`. `--force` redoes problems that already have one; `--jobs` works on several
-  at once. If `data/` is from an earlier round, it warns and asks first; `--yes` runs without asking.
-- **`test [slug...] [--docker]`** runs each solver on the public instances and checks its output: the format, and
+  into `data/` and builds the algorithm environment in `.envs/`. Run it again when a new round opens.
+- **`find-algorithms [slug...] [--force] [--jobs N] [--docker] [--yes]`** runs your agent on every problem without an
+  algorithm. Logs and attempts go to `runs/<slug>/`. `--force` redoes problems that already have one; `--jobs` works
+  on several at once. If `data/` is from an earlier round, it warns and asks first; `--yes` runs without asking.
+- **`test [slug...] [--docker]`** runs each algorithm on the public instances and checks its output: the format, and
   feasibility with the problem's checker when it is published.
 - **`submit [--yes] [--acknowledge-missing] [--wait]`** submits for your team's track:
-  - Main track: uploads `solvers/` with your extra packages. The site runs them on the private instances.
-  - Self-hosted track: runs your solvers here on the private instances and uploads the solutions, within the round's
-    submission window.
+  - Main track: uploads `algorithms/` with your extra packages. The site runs them on the private instances.
+  - Self-hosted track: runs your algorithms here on the private instances and uploads the solutions, within the
+    round's submission window.
 
-## How solvers run
+## How algorithms run
 
-In the sandbox, each solver is run with the following command-line arguments:
+In the sandbox, each algorithm is run with the following command-line arguments:
 
 ```bash
 python solve.py --problem <slug> --instance <instance.json> --output <solution.json> --time-limit <seconds>
 ```
 
 - Python 3.14 with numpy, scipy, pandas, networkx, ortools, pulp, highspy and pyomo, plus your extra packages.
-- 2 CPUs, 4 GB of memory, no network. The solver's folder is read-only.
-- A solver still running at the time limit scores 0. Leave a margin.
+- 2 CPUs, 4 GB of memory, no network. The algorithm's folder is read-only.
+- An algorithm still running at the time limit scores 0. Leave a margin.
 - The output follows the problem's solution schema, with a numeric `objective_value` that matches the decisions.
 
-`test` checks that the solver finishes in time and that its output has the right format. When the problem's checker is
-published, as in the testing stage and Stage 1, `test` then runs it on the solution, as the sandbox does: it verifies
-every constraint and recomputes the objective. The score comes from `submit --wait`.
+`test` checks that the algorithm finishes in time and that its output has the right format. When the problem's
+checker is published, as in the testing stage and Stage 1, `test` then runs it on the solution, as the sandbox does: it
+verifies every constraint and recomputes the objective. The score comes from `submit --wait`.
 
-By default, solvers and checkers run directly on your machine, without the sandbox's isolation. `--docker` runs them in
-the challenge's Docker images with the sandbox's limits: solvers in python-3.14, checkers in python-3.12.
+By default, algorithms and checkers run directly on your machine, without the sandbox's isolation. `--docker` runs
+them in the challenge's Docker images with the sandbox's limits: algorithms in python-3.14, checkers in python-3.12.
 
 ## Extra packages
 

@@ -1,4 +1,4 @@
-"""The solver environment, built the way the sandbox builds a submission's environment.
+"""The algorithm environment, built the way the sandbox builds a submission's environment.
 
 - without extra packages, the image's lock is installed as it is;
 - with them, the list is merged with the image's default packages (a listed package replaces the image's line for it)
@@ -33,28 +33,28 @@ class EnvironmentBuildError(Exception):
 
 
 @dataclass(frozen=True)
-class SolverEnv:
+class AlgorithmEnv:
     venv: Path
     python: Path
     requirements_lock: Path
 
 
 def packages(image: Image, requirements: list[str]) -> list[str]:
-    """What a solver can import, as the prompt names it."""
+    """What an algorithm can import, as the prompt names it."""
     return _merge(image.packages, requirements)
 
 
-def ensure_local(project: Project, image: Image, log: Callable[[str], None] = print) -> SolverEnv:
+def ensure_local(project: Project, image: Image, log: Callable[[str], None] = print) -> AlgorithmEnv:
     """The local environment built with uv, mimicking the sandbox's build job."""
     root = project.envs_dir / f"{image.id}-{_key(image, project.requirements)}"
-    env = SolverEnv(
+    env = AlgorithmEnv(
         venv=root / "venv", python=root / "venv" / "bin" / "python", requirements_lock=root / "requirements.lock"
     )
     if (root / _READY).exists():
         return env
 
     extra = f" and {len(project.requirements)} extra package(s)" if project.requirements else ""
-    log(f"Building the solver environment: Python {image.python_version}, the {image.id} packages{extra}...")
+    log(f"Building the algorithm environment: Python {image.python_version}, the {image.id} packages{extra}...")
 
     empty_folder(root)
     try:
@@ -97,7 +97,7 @@ def ensure_docker(project: Project, image: Image, image_ref: str, log: Callable[
     if (root / _READY).exists():
         return env_dir
 
-    log(f"Building the solver environment in {image_ref} with {len(project.requirements)} extra package(s)...")
+    log(f"Building the algorithm environment in {image_ref} with {len(project.requirements)} extra package(s)...")
 
     empty_folder(root)
     env_dir.mkdir()
@@ -151,7 +151,7 @@ def docker_run(
 
 
 def docker_user() -> str:
-    """The solver runs as this machine's user, so the files it writes to the mounted folders stay yours."""
+    """The algorithm runs as this machine's user, so the files it writes to the mounted folders stay yours."""
     return f"{os.getuid()}:{os.getgid()}"
 
 

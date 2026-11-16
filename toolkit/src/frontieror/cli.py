@@ -1,4 +1,4 @@
-"""The `frontieror` command: init, find-solvers, test and submit."""
+"""The `frontieror` command: init, find-algorithms, test and submit."""
 
 import functools
 import importlib
@@ -26,12 +26,12 @@ from frontieror.tools import Tools
 EXPECTED_ERRORS = (ConfigError, ApiError, EnvironmentBuildError, SubmitError, FileExistsError)
 
 NATIVE_NOTE = (
-    "Solvers run natively on this machine, as you and without the sandbox's isolation. "
+    "Algorithms run natively on this machine, as you and without the sandbox's isolation. "
     "Pass --docker to run them in the sandbox's image instead."
 )
 
 app = typer.Typer(
-    help="FrontierOR Challenge toolkit: download the problems, write solvers with your agent, test them the way the "
+    help="FrontierOR Challenge toolkit: download the problems, write algorithms with your agent, test them the way the "
     "sandbox runs them, and submit.",
     no_args_is_help=True,
     add_completion=False,
@@ -41,7 +41,7 @@ SlugsType = Annotated[
     list[str] | None, typer.Argument(help="Problem slugs; all problems of the round when none are given.")
 ]
 DockerType = Annotated[
-    bool, typer.Option("--docker", help="Run solvers in the sandbox's image with its limits (needs Docker).")
+    bool, typer.Option("--docker", help="Run algorithms in the sandbox's image with its limits (needs Docker).")
 ]
 
 
@@ -68,7 +68,7 @@ def init(
         str | None, typer.Option(help="Use this API token instead of signing in through the browser.")
     ] = None,
 ) -> None:
-    """Sign in, download the round's problems and public instances, and build the local solver environment."""
+    """Sign in, download the round's problems and public instances, and build the local algorithm environment."""
     project = _load_project()
     me = _sign_in(project, token)
     _ask_openrouter_key(project)
@@ -86,18 +86,18 @@ def init(
     typer.echo(f"Downloading the problems of {_round_name(stage, round_)}...")
     problems = download_data(project, typer.echo)
     ensure_local(project, load_image(project), typer.echo)
-    typer.echo(f"Ready: {len(problems)} problem(s) in data/problems. Next: `uv run frontieror find-solvers`.")
+    typer.echo(f"Ready: {len(problems)} problem(s) in data/problems. Next: `uv run frontieror find-algorithms`.")
 
 
-@command("find-solvers")
-def find_solvers(
+@command("find-algorithms")
+def find_algorithms(
     slugs: SlugsType = None,
-    force: Annotated[bool, typer.Option("--force", help="Also replace solvers that exist already.")] = False,
+    force: Annotated[bool, typer.Option("--force", help="Also replace algorithms that exist already.")] = False,
     jobs: Annotated[int, typer.Option(min=1, help="How many problems your agent works on at once.")] = 1,
     docker: DockerType = False,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask when data/ is from an earlier round.")] = False,
 ) -> None:
-    """Run your agent on each problem without a solver, writing solvers/<slug>/solve.py."""
+    """Run your agent on each problem without an algorithm, writing algorithms/<slug>/solve.py."""
     project = _load_project()
     problems = load_problems(project)
     try:
@@ -114,10 +114,10 @@ def find_solvers(
 
     todo = []
     for problem in _select(problems, slugs):
-        if force or not _has_solver(project, problem.slug):
+        if force or not _has_algorithm(project, problem.slug):
             todo.append(problem)
         else:
-            typer.echo(f"[{problem.slug}] has a solver already; --force replaces it.")
+            typer.echo(f"[{problem.slug}] has an algorithm already; --force replaces it.")
 
     if not todo:
         return
@@ -142,19 +142,19 @@ def find_solvers(
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         succeeded = list(pool.map(work, todo))
 
-    written = sum(_has_solver(project, p.slug) for p in todo)
-    typer.echo(f"{written} of {len(todo)} problem(s) have a solver now. Next: `uv run frontieror test`.")
+    written = sum(_has_algorithm(project, p.slug) for p in todo)
+    typer.echo(f"{written} of {len(todo)} problem(s) have an algorithm now. Next: `uv run frontieror test`.")
     if not all(succeeded):
         raise typer.Exit(1)
 
 
 @command()
 def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
-    """Run solvers/<slug>/solve.py on the public instances the way the sandbox does, and check each output's format and,
-    with the problem's published checker, its feasibility."""
+    """Run algorithms/<slug>/solve.py on the public instances the way the sandbox does, and check each output's format
+    and, with the problem's published checker, its feasibility."""
     project = _load_project()
     problems = _select(load_problems(project), slugs)
-    coverage = {c.slug: c for c in check_layout(project.solvers_dir, [p.slug for p in problems])}
+    coverage = {c.slug: c for c in check_layout(project.algorithms_dir, [p.slug for p in problems])}
     runner = _runner(project, docker)
 
     results: list[InstanceResult] = []
@@ -164,12 +164,12 @@ def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
         typer.secho(f"\n{problem.slug} · {problem.name}", bold=True)
         if layout.status != "ok":
             _warn(f"  {layout.message}")
-            bad_layout = bad_layout or bool(slugs)  # A problem asked for by name must have a solver.
+            bad_layout = bad_layout or bool(slugs)  # A problem asked for by name must have an algorithm.
             continue
 
         for instance in problem.instances:
             keep = project.runs_dir / problem.slug / "test" / instance.name
-            result = runner.run(project.solvers_dir / problem.slug, problem, instance, keep)
+            result = runner.run(project.algorithms_dir / problem.slug, problem, instance, keep)
             results.append(result)
             _show(result, project)
 
@@ -182,7 +182,7 @@ def test(slugs: SlugsType = None, docker: DockerType = False) -> None:
     )
     typer.echo(
         f"\n{passed} of {len(results)} instance run(s) passed. {note}\n"
-        "Next: `uv run frontieror submit --wait` to upload your solvers and solutions."
+        "Next: `uv run frontieror submit --wait` to upload your algorithms and solutions."
     )
     if passed < len(results) or bad_layout:
         raise typer.Exit(1)
@@ -193,11 +193,11 @@ def submit(
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Do not ask before submitting.")] = False,
     acknowledge_missing: Annotated[
         bool,
-        typer.Option("--acknowledge-missing", help="Submit even when some problems have no solver (they score 0)."),
+        typer.Option("--acknowledge-missing", help="Submit even when some problems have no algorithm (they score 0)."),
     ] = False,
     wait: Annotated[bool, typer.Option("--wait", help="Wait for the evaluation and show the result.")] = False,
 ) -> None:
-    """Submit for your team's track: Main uploads the solvers; Self-hosted runs them here and uploads the solutions."""
+    """Submit for your team's track: Main uploads algorithms; Self-hosted runs them here and uploads the solutions."""
     project = _load_project()
     me = api.me()
     team, round_ = me["team"], me["round"]
@@ -212,7 +212,7 @@ def submit(
     if open_round:
         raise SubmitError(
             f"data/ does not have the problems of {open_round} yet. "
-            "Run `uv run frontieror init`, then `uv run frontieror find-solvers`."
+            "Run `uv run frontieror init`, then `uv run frontieror find-algorithms`."
         )
 
     typer.echo(f"{team['name']}, {team['track']} track: {me['submissions_left_today']} submission(s) left today.")
@@ -304,9 +304,9 @@ def _select(problems: list[Problem], slugs: list[str] | None) -> list[Problem]:
     return [known[s] for s in slugs]
 
 
-def _has_solver(project: Project, slug: str) -> bool:
-    """Whether solvers/<slug>/solve.py exists."""
-    return (project.solvers_dir / slug / ENTRY).exists()
+def _has_algorithm(project: Project, slug: str) -> bool:
+    """Whether algorithms/<slug>/solve.py exists."""
+    return (project.algorithms_dir / slug / ENTRY).exists()
 
 
 def _load_entry(project: Project, spec: str) -> Callable:
@@ -322,7 +322,7 @@ def _load_entry(project: Project, spec: str) -> Callable:
 
 
 def _runner(project: Project, docker: bool) -> Runner:
-    """A runner for the project's image; warns when the solvers run natively."""
+    """A runner for the project's image; warns when the algorithms run natively."""
     image = load_image(project)
     if not docker:
         _warn(NATIVE_NOTE)

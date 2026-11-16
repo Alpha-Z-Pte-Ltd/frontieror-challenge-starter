@@ -1,4 +1,4 @@
-"""The format checks on a solver's output, the part of the evaluation that can run without the private checker.
+"""The format checks on an algorithm's output, the part of the evaluation that can run without the private checker.
 
 The sandbox scores the numeric `objective_value` of /work/out/solution.json once the checker has confirmed it matches
 the decisions. Locally that last part cannot be checked: a solution that passes here can still be infeasible.
@@ -18,7 +18,7 @@ from frontieror.constants import MAX_ERROR_CHARS, MAX_ERRORS, MAX_SOLUTION_BYTES
 
 @dataclass(frozen=True)
 class OutputCheck:
-    """Represents the result of checking a solver's output."""
+    """Represents the result of checking an algorithm's output."""
 
     status: str  # ok, no_output, too_large, invalid_json or invalid_format.
     message: str
@@ -26,9 +26,9 @@ class OutputCheck:
 
 
 def check_output(path: Path, json_schema: str) -> OutputCheck:
-    """Check the solver's output file at `path` against the problem's JSON Schema."""
+    """Check the algorithm's output file at `path` against the problem's JSON Schema."""
     if not path.is_file():
-        return OutputCheck("no_output", "The solver wrote no solution file at --output.")
+        return OutputCheck("no_output", "The algorithm wrote no solution file at --output.")
 
     size = path.stat().st_size
     if size > MAX_SOLUTION_BYTES:

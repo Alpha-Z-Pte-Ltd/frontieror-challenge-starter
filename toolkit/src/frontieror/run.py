@@ -1,11 +1,11 @@
-"""Runs a solver on one instance the way the sandbox does.
+"""Runs an algorithm on one instance the way the sandbox does.
 
     python solve.py --problem <slug> --instance <instance> --output <solution> --time-limit <s>
 
 from inside a read-only copy of the problem's folder, with the instance read-only, OMP_NUM_THREADS=2 and
-SANDBOX_PROBLEM set, and stopped at the instance's time limit. A solver still running then fails, whatever it wrote.
+SANDBOX_PROBLEM set, and stopped at the instance's time limit. An algorithm still running then fails, whatever it wrote.
 
-Natively the solver runs as you on this machine, without the sandbox's isolation or memory limit; only a minimal
+Natively the algorithm runs as you on this machine, without the sandbox's isolation or memory limit; only a minimal
 environment is passed. With Docker it runs in the published image under the sandbox's limits: 2 CPUs, 4 GB, no network,
 a read-only filesystem with a /tmp.
 """
@@ -31,8 +31,8 @@ from frontieror.constants import (
     SANDBOX_PIDS,
     SANDBOX_TMP_SIZE,
 )
-from frontieror.environment import SolverEnv, docker_run
-from frontieror.layout import solver_files
+from frontieror.environment import AlgorithmEnv, docker_run
+from frontieror.layout import algorithm_files
 
 SANDBOX_PATH = f"{ENV_MOUNT}/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
 SANDBOX_LIMITS = (
@@ -52,13 +52,13 @@ class RunOutcome:
 
 @dataclass(frozen=True)
 class Workspace:
-    """One run's files: work/solver (read-only copy), work/in/instance.json, work/out, work/tmp, work/log.txt."""
+    """One run's files: work/algorithm (read-only copy), work/in/instance.json, work/out, work/tmp, work/log.txt."""
 
     root: Path
 
     @property
-    def solver(self) -> Path:
-        return self.root / "solver"
+    def algorithm(self) -> Path:
+        return self.root / "algorithm"
 
     @property
     def instance(self) -> Path:
@@ -77,8 +77,8 @@ class Workspace:
         return self.root / "log.txt"
 
     @classmethod
-    def create(cls, root: Path, solver_dir: Path, instance: Path) -> Workspace:
-        """Copies the solver folder and the instance into a new workspace, ready to run.
+    def create(cls, root: Path, algorithm_dir: Path, instance: Path) -> Workspace:
+        """Copies the algorithm folder and the instance into a new workspace, ready to run.
 
         Use it with `with`, which removes it afterwards.
         """
@@ -88,12 +88,12 @@ class Workspace:
         work.instance.parent.mkdir()
         shutil.copyfile(instance, work.instance)
 
-        for path in solver_files(solver_dir):
-            target = work.solver / path.relative_to(solver_dir)
+        for path in algorithm_files(algorithm_dir):
+            target = work.algorithm / path.relative_to(algorithm_dir)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(path, target)
 
-        _read_only(work.solver)
+        _read_only(work.algorithm)
         _read_only(work.instance.parent)
         return work
 
@@ -111,8 +111,8 @@ class Workspace:
         self.remove()
 
 
-def run_native(work: Workspace, slug: str, time_limit_s: int, env: SolverEnv) -> RunOutcome:
-    """Runs the solver natively, without Docker, mimicking the sandbox's environment and time limit."""
+def run_native(work: Workspace, slug: str, time_limit_s: int, env: AlgorithmEnv) -> RunOutcome:
+    """Runs the algorithm natively, without Docker, mimicking the sandbox's environment and time limit."""
     variables = {
         "PATH": f"{env.python.parent}{os.pathsep}{os.environ.get('PATH', '')}",
         "VIRTUAL_ENV": str(env.venv),
@@ -131,7 +131,7 @@ def run_native(work: Workspace, slug: str, time_limit_s: int, env: SolverEnv) ->
         start = time.monotonic()
         process = subprocess.Popen(
             command,
-            cwd=work.solver,
+            cwd=work.algorithm,
             env=variables,
             stdout=log,
             stderr=subprocess.STDOUT,
@@ -144,7 +144,7 @@ def run_native(work: Workspace, slug: str, time_limit_s: int, env: SolverEnv) ->
         except subprocess.TimeoutExpired:
             code = None
         finally:
-            # Also stops what the solver left running, and the solver itself on Ctrl+C, which it does not receive.
+            # Also stops what the algorithm left running, and the algorithm itself on Ctrl+C, which it does not receive.
             _kill_group(process)
         wall = time.monotonic() - start
 
@@ -152,7 +152,7 @@ def run_native(work: Workspace, slug: str, time_limit_s: int, env: SolverEnv) ->
 
 
 def run_docker(work: Workspace, slug: str, time_limit_s: int, image_ref: str, env_dir: Path | None) -> RunOutcome:
-    """Runs the solver inside the docker image, mimicking the sandbox's environment and time limit."""
+    """Runs the algorithm inside the docker image, mimicking the sandbox's environment and time limit."""
     name = f"frontieror-{uuid.uuid4().hex[:12]}"
     env = {
         "HOME": "/tmp",
@@ -163,7 +163,7 @@ def run_docker(work: Workspace, slug: str, time_limit_s: int, image_ref: str, en
         "SANDBOX_PROBLEM": slug,
     }
     mounts = [
-        f"{work.solver}:/work/solver:ro",
+        f"{work.algorithm}:/work/algorithm:ro",
         f"{work.instance.parent}:/work/in:ro",
         f"{work.output.parent}:/work/out",
     ]
@@ -178,7 +178,7 @@ def run_docker(work: Workspace, slug: str, time_limit_s: int, image_ref: str, en
         ["python", ENTRY, *arguments],
         env=env,
         mounts=mounts,
-        options=["--name", name, "--pull", "never", "-w", "/work/solver", *SANDBOX_LIMITS],
+        options=["--name", name, "--pull", "never", "-w", "/work/algorithm", *SANDBOX_LIMITS],
     )
 
     with work.log.open("wb") as log:
@@ -199,7 +199,7 @@ def run_docker(work: Workspace, slug: str, time_limit_s: int, image_ref: str, en
 
 
 def _arguments(slug: str, instance: Path, output: Path, time_limit_s: int) -> list[str]:
-    """Solver command line arguments, as the sandbox passes them."""
+    """Algorithm command line arguments, as the sandbox passes them."""
     return ["--problem", slug, "--instance", str(instance), "--output", str(output), "--time-limit", str(time_limit_s)]
 
 
@@ -207,7 +207,7 @@ def _outcome(code: int | None, wall: float, time_limit_s: int, log: str) -> RunO
     if code is None:
         return RunOutcome(
             "timeout",
-            f"Execution timed out after {time_limit_s} s: the sandbox stops the solver "
+            f"Execution timed out after {time_limit_s} s: the sandbox stops the algorithm "
             "at its time limit and scores the instance 0, even if it wrote a solution.",
             wall,
             log,
@@ -223,7 +223,7 @@ def _outcome(code: int | None, wall: float, time_limit_s: int, log: str) -> RunO
 
 
 def _kill_group(process: subprocess.Popen) -> None:
-    """Stops the solver and every process it started."""
+    """Stops the algorithm and every process it started."""
     # No such group once all of them exited; macOS refuses a group of exited, unreaped processes.
     with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(process.pid, signal.SIGKILL)

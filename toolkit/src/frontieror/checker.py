@@ -1,8 +1,8 @@
-"""Runs a problem's published checker on a solution, as the sandbox does after the solver:
+"""Runs a problem's published checker on a solution, as the sandbox does after the algorithm:
 
     python feasibility_check.py --instance_path <instance> --solution_path <solution> --result_path <result>
 
-natively with the solver environment's Python, or with Docker in the image the sandbox runs checkers in, under the
+natively with the algorithm environment's Python, or with Docker in the image the sandbox runs checkers in, under the
 sandbox's limits. The result has `feasible`, `violations` and `computed_objective_value`, the objective that is scored.
 """
 

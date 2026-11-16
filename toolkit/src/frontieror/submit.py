@@ -1,5 +1,5 @@
-"""Submitting. The Main track uploads the solvers as an archive with the image and extra packages as fields; the site
-runs them on the private instances. The Self-hosted track runs the solvers here, on the private instances handed out
+"""Submitting. The Main track uploads the algorithms as an archive with the image and extra packages as fields; the site
+runs them on the private instances. The Self-hosted track runs the algorithms here, on the private instances handed out
 inside the site's submission window, and uploads each solution before its deadline.
 """
 
@@ -54,12 +54,12 @@ def submit_main(
     log: LogType = print,
     confirm: ConfirmType = _reject,
 ) -> str:
-    """Submits the solvers in solvers/<slug>/ for the Main track, with the image and extra packages.
+    """Submits the algorithms in algorithms/<slug>/ for the Main track, with the image and extra packages.
 
     Args:
-        project: The project, with its solvers and extra packages.
-        image: The image the solvers run in.
-        acknowledge_missing: Submit even when some problems have no solver; they score 0.
+        project: The project, with its algorithms and extra packages.
+        image: The image the algorithms run in.
+        acknowledge_missing: Submit even when some problems have no algorithm; they score 0.
         yes: Submit without asking `confirm` first.
         log: Prints a progress line.
         confirm: Asks a yes-or-no question; the default answers no.
@@ -75,42 +75,45 @@ def submit_main(
     if not slugs:
         raise SubmitError("The open round has no problems to submit for.")
 
-    coverage = check_layout(project.solvers_dir, slugs)
+    coverage = check_layout(project.algorithms_dir, slugs)
     for c in coverage:
         log(f"  {'✓' if c.status == 'ok' else '✗'} {c.message}")
 
     ready = [c.slug for c in coverage if c.status == "ok"]
     if not ready:
         raise SubmitError(
-            "There is no solver for any problem of the open round. Run `uv run frontieror find-solvers` first."
+            "There is no algorithm for any problem of the open round. Run `uv run frontieror find-algorithms` first."
         )
 
     missing = [c.slug for c in coverage if c.status != "ok"]
     if missing and not acknowledge_missing:
         if yes:
             raise SubmitError(
-                f"No solver for {', '.join(missing)}. Pass --acknowledge-missing to submit anyway; "
+                f"No algorithm for {', '.join(missing)}. Pass --acknowledge-missing to submit anyway; "
                 "those problems score 0."
             )
 
-        if not confirm(f"No solver for {', '.join(missing)}: those problems score 0. Submit anyway?"):
+        if not confirm(f"No algorithm for {', '.join(missing)}: those problems score 0. Submit anyway?"):
             raise SubmitError("Nothing was submitted.")
 
     errors = _check_requirements(project.requirements, image)
     if errors:
         raise SubmitError("Fix [environment] requirements in frontieror.toml:\n" + "\n".join(errors))
 
-    archive = pack(project.solvers_dir, ready)
+    archive = pack(project.algorithms_dir, ready)
     if len(archive) > MAX_ARCHIVE_BYTES:
         limit = MAX_ARCHIVE_BYTES // 1024 // 1024
         raise SubmitError(f"The archive has {len(archive) / 1024 / 1024:.1f} MB; the limit is {limit} MB.")
 
     extra = f" with {len(project.requirements)} extra package(s)" if project.requirements else ""
-    if not yes and not confirm(f"Submit {len(ready)} solver(s) to run in {IMAGE}{extra}?"):
+    if not yes and not confirm(f"Submit {len(ready)} algorithm(s) to run in {IMAGE}{extra}?"):
         raise SubmitError("Nothing was submitted.")
 
     result = api.submit_main(archive, IMAGE, "\n".join(project.requirements) or None, acknowledge_missing=bool(missing))
-    log(f"Submitted {result['id']}. The site builds the environment, then runs every solver on the private instances.")
+    log(
+        f"Submitted {result['id']}. "
+        "The site builds the environment, then runs every algorithm on the private instances."
+    )
     if result.get("progress"):
         log(_progress(result["status"], result["progress"]))
     return result["id"]
@@ -125,15 +128,15 @@ def submit_self_hosted(
     log: LogType = print,
     confirm: ConfirmType = _reject,
 ) -> str:
-    """Runs the solvers here on the Self-hosted track's private instances and uploads their solutions.
+    """Runs the algorithms here on the Self-hosted track's private instances and uploads their solutions.
 
     Opens the round's submission window, or resumes an open one. Each instance's clock starts when it is downloaded,
     and its solution is uploaded before its deadline. An instance the site refuses is skipped, and the rest still run.
 
     Args:
-        project: The project, with its solvers.
+        project: The project, with its algorithms.
         problems: The round's problems, as downloaded by `frontieror init`.
-        runner: Runs the solvers.
+        runner: Runs the algorithms.
         yes: Open a window without asking `confirm` first.
         log: Prints a progress line.
         confirm: Asks a yes-or-no question; the default answers no.
@@ -175,8 +178,8 @@ def submit_self_hosted(
             continue
 
         slug = instance["problem_slug"]
-        if not (project.solvers_dir / slug / ENTRY).is_file() or slug not in local:
-            log(f"  {label}: no solver, so it is not started and scores 0")
+        if not (project.algorithms_dir / slug / ENTRY).is_file() or slug not in local:
+            log(f"  {label}: no algorithm, so it is not started and scores 0")
             continue
 
         try:
@@ -270,13 +273,13 @@ def _progress(status: str, progress: dict | None) -> str:
 def _solve_instance(
     submission_id: str, instance: dict, project: Project, problem: Problem, runner: Runner, folder: Path, log: LogType
 ) -> bool:
-    """Downloads an instance, runs its solver and uploads the solution; True if the upload closed the submission."""
+    """Downloads an instance, runs its algorithm and uploads the solution; True if the upload closed the submission."""
     label = f"{problem.slug}/{instance['name']}"
     path = folder / f"{problem.slug}-{instance['name']}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(_retrying(api.self_hosted_instance, submission_id, instance["id"], label=label, log=log))
     result = runner.run(
-        project.solvers_dir / problem.slug,
+        project.algorithms_dir / problem.slug,
         problem,
         Instance(instance["name"], path, instance["time_limit_s"]),
         keep=folder / problem.slug / instance["name"],

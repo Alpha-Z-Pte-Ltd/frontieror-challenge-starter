@@ -33,7 +33,7 @@ def tools(project, problem, runner):
     return Tools(project, problem, runner, log=lambda _: None)
 
 
-def test_valid_solver_passes(project, problem, runner):
+def test_valid_algorithm_passes(project, problem, runner):
     report = tools(project, problem, runner).test(GOOD)
     assert report.passed
     assert report.results[0].objective == 12.5
@@ -45,7 +45,7 @@ def test_failures_are_reported(project, problem, runner):
     solve_cases = {
         "crash": "def solve(instance, time_limit_s):\n    raise RuntimeError('boom')",
         "timeout": "import time\n\ndef solve(instance, time_limit_s):\n    time.sleep(30)",
-        # The solver's own folder is read-only, as in the sandbox.
+        # The algorithm's own folder is read-only, as in the sandbox.
         "crash-read-only": "def solve(instance, time_limit_s):\n    open('scratch.txt', 'w')",
         "invalid_format": GOOD.replace('list(range(instance["n"]))', '"0-1-2"'),
     }

@@ -1,4 +1,4 @@
-"""Your agent goes here. The toolkit calls `find_solver` once per problem, with the problem, the toolkit's tools and
+"""Your agent goes here. The toolkit calls `find_algorithm` once per problem, with the problem, the toolkit's tools and
 `settings`, the [agent] table of frontieror.toml.
 
 In this example, the agent is a simple loop that:
@@ -23,8 +23,8 @@ client = OpenRouter(
 )
 
 
-def find_solver(problem: Problem, tools: Tools, settings: dict) -> None:
-    """Writes a solver for the problem and saves it with `tools.save`.
+def find_algorithm(problem: Problem, tools: Tools, settings: dict) -> None:
+    """Writes an algorithm for the problem and saves it with `tools.save`.
 
     Args:
         problem: The problem to solve.
@@ -33,7 +33,7 @@ def find_solver(problem: Problem, tools: Tools, settings: dict) -> None:
 
     The function should call `tools.save(code)` with the final code to save it.
     """
-    tools.log(f"calling solver for problem {problem.name} ({problem.slug})")
+    tools.log(f"finding an algorithm for problem {problem.name} ({problem.slug})")
     model = settings["model"]
     task = prompts.task(problem, tools.environment)
     messages = [{"role": "user", "content": task}]
@@ -62,7 +62,7 @@ def find_solver(problem: Problem, tools: Tools, settings: dict) -> None:
         messages = [messages[0], {"role": "assistant", "content": reply}, {"role": "user", "content": feedback}]
 
     if best_code is None:
-        tools.log("agent failed to find a working solver, so no solver was saved")
+        tools.log("agent failed to find a working algorithm, so no algorithm was saved")
     else:
         tools.save(best_code)
 

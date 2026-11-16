@@ -1,7 +1,7 @@
 [project]
 name = "frontieror"
 version = "0.1.0"
-description = "FrontierOR Challenge toolkit: downloads the problems, tests solvers the way the sandbox runs them, and submits"
+description = "FrontierOR Challenge toolkit: downloads the problems, tests algorithms the way the sandbox runs them, and submits"
 requires-python = ">=3.14"
 dependencies = [
     "httpx>=0.28.1",

@@ -125,9 +125,9 @@ class Api:
 
         Args:
             archive: The zip with one folder per problem.
-            docker_image: The image the solvers run in.
+            docker_image: The image the algorithms run in.
             requirements: Extra PyPI packages, one per line, or None.
-            acknowledge_missing: Submit even though some problems have no solver.
+            acknowledge_missing: Submit even though some problems have no algorithm.
 
         Returns:
             The new submission.

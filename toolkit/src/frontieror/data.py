@@ -35,7 +35,7 @@ class Instance:
     Attributes:
         name: The instance's name, unique within its problem.
         path: The instance file, JSON in the problem's instance schema.
-        time_limit_s: The seconds a solver gets for it.
+        time_limit_s: The seconds an algorithm gets for it.
     """
 
     name: str
@@ -48,7 +48,7 @@ class Problem:
     """A problem of the current round, with its public instances.
 
     Attributes:
-        slug: The problem's id, which also names its folder in solvers/.
+        slug: The problem's id, which also names its folder in algorithms/.
         name: The problem's title.
         objective: "minimize" or "maximize".
         description: The problem statement in Markdown, with TeX math.
@@ -72,7 +72,7 @@ class Problem:
 
 @dataclass(frozen=True)
 class Image:
-    """The docker image the solvers run in.
+    """The docker image the algorithms run in.
 
     Attributes:
         id: The image's id on the site, such as "python-3.14".
@@ -191,7 +191,7 @@ def load_image(project: Project) -> Image:
     """
     meta_file = project.image_dir / "image.json"
     if not meta_file.is_file():
-        raise ConfigError("The solver image is not downloaded yet. Run `uv run frontieror init` first.")
+        raise ConfigError("The image is not downloaded yet. Run `uv run frontieror init` first.")
 
     meta = json.loads(meta_file.read_text())
     return Image(
